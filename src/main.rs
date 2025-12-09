@@ -1,45 +1,41 @@
 use clap::Parser;
 
-mod app_error;
-mod weather;
+mod error;
 mod time_service;
+mod weather;
 
-#[derive(Parser, Debug)]
+use error::AppError;
+
+#[derive(Parser)]
 #[command(
-    author = "Kyrylo",
+    author = "Kyrylo Savchuk",
     version = "0.1.0",
-    about = "Simple CLI weather + time app",
-    long_about = None
+    about = "Simple CLI app: weather + time by city"
 )]
 struct Args {
-    /// Назва міста
     city: String,
+}
+
+async fn run(city: String) -> Result<(), AppError> {
+    let weather = weather::get_weather_for_city(&city).await?;
+    let time = time_service::get_time_for_city(&city).await?;
+
+    println!("==============================");
+    println!("Місто: {}", city.to_uppercase());
+    println!("------------------------------");
+    println!("Температура: {} °C", weather.temperature);
+    println!("Опис: {}", weather.description);
+    println!("Час: {}", time);
+    println!("==============================");
+
+    Ok(())
 }
 
 #[tokio::main]
 async fn main() {
     let args = Args::parse();
 
-    println!("Місто з аргументів: {}", args.city);
-
-    match weather::get_weather_for_city(&args.city).await {
-        Ok(info) => {
-            println!("\nПогода для: {}", info.city);
-            println!("Температура: {} °C", info.temperature);
-            println!("Опис: {}", info.description);
-            println!("Час вимірювання: {}", info.time);
-
-            match time_service::get_time_for_city(&args.city).await {
-                Ok(time_str) => {
-                    println!("\n{}", time_str);
-                }
-                Err(err) => {
-                    eprintln!("Не вдалося отримати час: {}", err);
-                }
-            }
-        }
-        Err(err) => {
-            eprintln!("Помилка погоди: {}", err);
-        }
+    if let Err(e) = run(args.city).await {
+        eprintln!("Помилка: {}", e);
     }
 }

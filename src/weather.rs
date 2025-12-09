@@ -1,6 +1,6 @@
+use crate::error::AppError;
 use reqwest::Client;
 use serde::Deserialize;
-
 #[derive(Debug)]
 pub struct WeatherInfo {
     pub city: String,
@@ -8,7 +8,6 @@ pub struct WeatherInfo {
     pub description: String,
     pub time: String,
 }
-
 
 #[derive(Debug, Deserialize)]
 struct CurrentWeather {
@@ -26,19 +25,16 @@ struct WeatherApiResponse {
 fn coords_for_city(city: &str) -> Option<(f64, f64)> {
     match city.to_lowercase().as_str() {
         "kyiv" | "kiev" | "київ" => Some((50.45, 30.52)),
-        "lviv" | "львів"        => Some((49.84, 24.03)),
+        "lviv" | "львів" => Some((49.84, 24.03)),
         "odesa" | "odessa" | "одеса" => Some((46.48, 30.73)),
-        "berlin" | "берлін"     => Some((52.52, 13.41)),
+        "berlin" | "берлін" => Some((52.52, 13.41)),
         _ => None,
     }
 }
 
-
-pub async fn get_weather_for_city(
-    city: &str,
-) -> Result<WeatherInfo, Box<dyn std::error::Error>> {
-    let (lat, lon) = coords_for_city(city)
-        .ok_or_else(|| format!("Місто '{}' не знайдено", city))?;
+pub async fn get_weather_for_city(city: &str) -> Result<WeatherInfo, AppError> {
+    let (lat, lon) =
+        coords_for_city(city).ok_or_else(|| AppError::UnknownCity(city.to_string()))?;
 
     let client = Client::new();
 
@@ -52,7 +48,6 @@ pub async fn get_weather_for_city(
 
     let cw = api.current_weather;
 
-    
     let description = format!("weather code: {}", cw.weathercode);
 
     let info = WeatherInfo {
